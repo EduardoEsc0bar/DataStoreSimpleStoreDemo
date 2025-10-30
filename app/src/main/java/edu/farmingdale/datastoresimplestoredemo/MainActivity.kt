@@ -6,22 +6,20 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import edu.farmingdale.datastoresimplestoredemo.data.AppPreferences
+import edu.farmingdale.datastoresimplestoredemo.data.AppStorage
 import edu.farmingdale.datastoresimplestoredemo.ui.theme.DataStoreSimpleStoreDemoTheme
 import kotlinx.coroutines.launch
 import java.io.FileOutputStream
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,25 +37,24 @@ class MainActivity : ComponentActivity() {
         Log.d("MainActivity", fileContents)
     }
     private fun writeToInternalFile() {
-        val outputStream: FileOutputStream = openFileOutput("fav_haiku", Context.MODE_PRIVATE)
+        val outputStream: FileOutputStream = openFileOutput("edufilename", Context.MODE_PRIVATE)
         val writer = PrintWriter(outputStream)
 
         // Write three lines
-        writer.println("This world of dew")
-        writer.println("is a world of dew,")
+        writer.println("This world of fun")
         writer.println("and yet, and yet.")
 
         writer.close()
     }
 
     private fun readFromInternalFile(): String {
-        val inputStream = openFileInput("fav_haiku")
+        val inputStream = openFileInput("edufilename")
         val reader = inputStream.bufferedReader()
         val stringBuilder = StringBuilder()
 
         // Append each line and newline character to stringBuilder
         reader.forEachLine {
-            stringBuilder.append(it).append("\n BCS 371 \n").append(System.lineSeparator())
+            stringBuilder.append(it).append("\n CSC 371 \n").append(System.lineSeparator())
         }
 
         return stringBuilder.toString()
@@ -65,23 +62,70 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun DataStoreDemo(modifier: Modifier) {
-    val store = AppStorage(LocalContext.current)
+fun DataStoreDemo(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val store = remember { AppStorage(context) }
     val appPrefs = store.appPreferenceFlow.collectAsState(AppPreferences())
     val coroutineScope = rememberCoroutineScope()
-    Column (modifier = Modifier.padding(50.dp)) {
-        Text("Values = ${appPrefs.value.userName}, " +
-                "${appPrefs.value.highScore}, ${appPrefs.value.darkMode}")
+
+    var inputText by remember { mutableStateOf("") } // user input
+
+    Column(modifier = Modifier.padding(40.dp)) {
+        // For todo4, display the values stored in the DataStore
+        Text("Current values:")
+        Text("Username: ${appPrefs.value.userName}")
+        Text("High Score: ${appPrefs.value.highScore}")
+        Text("Dark Mode: ${appPrefs.value.darkMode}")
+
+        Spacer(Modifier.padding(8.dp))
+
+        // For todo2, store the username through a text field (then officially saved in todo3)
+        TextField(
+            value = inputText,
+            onValueChange = { inputText = it },
+            label = { Text("Enter Username") }
+        )
+
+        Spacer(Modifier.padding(8.dp))
+
+        // For todo3, Button to save username
         Button(onClick = {
             coroutineScope.launch {
-                store.saveUsername("flygirl")
+                store.saveUsername(inputText)
             }
-
         }) {
-            Text("Save Values")
+            Text("Save Username")
+        }
+
+        Spacer(Modifier.padding(8.dp))
+
+        // increase high score by 1
+        Button(onClick = {
+            coroutineScope.launch {
+                val nextScore = appPrefs.value.highScore + 1
+                store.saveHighScore(nextScore)
+            }
+        }) {
+            Text("Increase High Score")
+        }
+
+        Spacer(Modifier.padding(8.dp))
+
+        // toggle dark mode
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Dark Mode")
+            Switch(
+                checked = appPrefs.value.darkMode,
+                onCheckedChange = { checked ->
+                    coroutineScope.launch {
+                        store.saveDarkMode(checked)
+                    }
+                }
+            )
         }
     }
 }
+
 
 // ToDo 1: Modify the App to store a high score and a dark mode preference
 // ToDo 2: Modify the APP to store the username through a text field
